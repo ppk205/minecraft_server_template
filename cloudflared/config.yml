@@ -1,0 +1,7 @@
+tunnel: minecraft-tunnel
+credentials-file: /etc/cloudflared/<credentials_file.json>
+
+ingress:
+  - hostname: <your_domain>
+    service: tcp://127.0.0.1:25565
+  - service: http_status:404
