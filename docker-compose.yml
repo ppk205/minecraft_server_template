@@ -1,6 +1,23 @@
 version: '3.8'
 
 services:
+  webui:
+    build:
+      context: ./webui
+    container_name: mc_webui
+    ports:
+      - "3001:3001"
+    environment:
+      - PORT=3001
+      - WEBUI_ADMIN_USER=${WEBUI_ADMIN_USER:-admin}
+      - WEBUI_ADMIN_PASS=${WEBUI_ADMIN_PASS:-Hehehe@123}
+      - JWT_SECRET=${JWT_SECRET:-supersecret123}
+      - MC_SERVER_DIR=/app/atmg
+      - DOCKER_CONTAINER_NAME=atmg
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ./atmg:/app/atmg
+    restart: unless-stopped
   mc:
     image: itzg/minecraft-server
     container_name: atmg
