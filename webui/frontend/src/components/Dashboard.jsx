@@ -10,7 +10,7 @@ function StatusOverview({ token }) {
 
   const fetchStatus = async () => {
     try {
-      const res = await fetch('http://localhost:3001/api/docker/status', {
+      const res = await fetch('/api/docker/status', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const data = await res.json();
@@ -22,7 +22,7 @@ function StatusOverview({ token }) {
 
   const fetchLogs = async () => {
     try {
-      const res = await fetch('http://localhost:3001/api/docker/logs', {
+      const res = await fetch('/api/docker/logs', {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const data = await res.json();
@@ -42,7 +42,7 @@ function StatusOverview({ token }) {
 
   const controlServer = async (action) => {
     try {
-      await fetch(`http://localhost:3001/api/docker/${action}`, {
+      await fetch(`/api/docker/${action}`, {
         method: 'POST',
         headers: { 'Authorization': `Bearer ${token}` }
       });

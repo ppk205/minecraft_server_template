@@ -1,21 +1,90 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Shield, HardDrive, DownloadCloud } from 'lucide-react';
 
 export default function ServerSettings({ token }) {
   const [software, setSoftware] = useState('AUTO_CURSEFORGE');
   const [missingModsText, setMissingModsText] = useState('');
+  const [networkConfig, setNetworkConfig] = useState({
+      MC_MEMORY: '8G',
+      PLAYIT_KEY: '',
+      CLOUDFLARED_TOKEN: '',
+      NGROK_AUTHTOKEN: '',
+      TAILSCALE_AUTHKEY: ''
+  });
 
-  const handleChangeSoftware = () => {
+  useEffect(() => {
+      const fetchSettings = async () => {
+          try {
+              const res = await fetch('/api/settings', {
+                  headers: { 'Authorization': `Bearer ${token}` }
+              });
+              const data = await res.json();
+              if (data) {
+                  setSoftware(data.MC_TYPE || 'AUTO_CURSEFORGE');
+                  setNetworkConfig({
+                      MC_MEMORY: data.MC_MEMORY || '8G',
+                      PLAYIT_KEY: data.PLAYIT_KEY || '',
+                      CLOUDFLARED_TOKEN: data.CLOUDFLARED_TOKEN || '',
+                      NGROK_AUTHTOKEN: data.NGROK_AUTHTOKEN || '',
+                      TAILSCALE_AUTHKEY: data.TAILSCALE_AUTHKEY || ''
+                  });
+              }
+          } catch(err) {}
+      };
+      fetchSettings();
+  }, [token]);
+
+  const handleChangeSoftware = async () => {
     const confirmBackup = window.confirm(
       "WARNING: Changing the server software will delete the current world to prevent corruption. " +
       "Do you want to run a backup of the world folder first before wiping?"
     );
-    // Real implementation would trigger a backup route, then update .env TYPE/MODPACK_PLATFORM, and restart
-    if (confirmBackup) {
-      alert("World zipped and saved to backups/. Software changed. Restart server to apply.");
-    } else {
-      alert("Software changed without backup. Restart server to apply.");
+    try {
+        await fetch('/api/software/change', {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${token}`,
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ software, backup: confirmBackup })
+        });
+        alert(confirmBackup ? "World zipped and saved to backups/. Software changed. Server is restarting." : "Software changed without backup. Server is restarting.");
+    } catch(err) {
+        alert("Failed to change software.");
     }
+  };
+
+  const handleSaveNetworkConfig = async () => {
+      try {
+          let profiles = [];
+          if (networkConfig.PLAYIT_KEY) profiles.push('playit');
+          if (networkConfig.CLOUDFLARED_TOKEN) profiles.push('cloudflared');
+          if (networkConfig.NGROK_AUTHTOKEN) profiles.push('ngrok');
+          if (networkConfig.TAILSCALE_AUTHKEY) profiles.push('tailscale');
+
+          const finalConfig = {
+              ...networkConfig,
+              COMPOSE_PROFILES: profiles.join(',')
+          };
+
+          await fetch('/api/settings', {
+              method: 'POST',
+              headers: {
+                  'Authorization': `Bearer ${token}`,
+                  'Content-Type': 'application/json'
+              },
+              body: JSON.stringify(finalConfig)
+          });
+
+          await fetch('/api/docker/up', {
+              method: 'POST',
+              headers: { 'Authorization': `Bearer ${token}` }
+          });
+
+          alert("Network & System Config saved. Docker compose reloading.");
+      } catch (err) {
+          alert("Failed to save config.");
+      }
   };
 
   const handleFixMods = async () => {
@@ -23,7 +92,7 @@ export default function ServerSettings({ token }) {
     const names = missingModsText.split(',').map(n => n.trim()).filter(n => n);
     
     try {
-      const res = await fetch('http://localhost:3001/api/mods/fix-missing', {
+      const res = await fetch('/api/mods/fix-missing', {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,
@@ -101,17 +170,25 @@ export default function ServerSettings({ token }) {
         <div className="space-y-4">
            <div>
              <label className="block text-sm font-medium text-slate-300 mb-2">Max RAM Allocation</label>
-             <input type="text" defaultValue="8G" className="w-full px-4 py-3 rounded-xl bg-black/20 border border-white/10 text-white" />
+             <input type="text" value={networkConfig.MC_MEMORY} onChange={(e) => setNetworkConfig({...networkConfig, MC_MEMORY: e.target.value})} className="w-full px-4 py-3 rounded-xl bg-black/20 border border-white/10 text-white" />
            </div>
            <div>
              <label className="block text-sm font-medium text-slate-300 mb-2">Playit.gg Secret Key</label>
-             <input type="password" placeholder="playit-secret-key" className="w-full px-4 py-3 rounded-xl bg-black/20 border border-white/10 text-white" />
+             <input type="password" value={networkConfig.PLAYIT_KEY} onChange={(e) => setNetworkConfig({...networkConfig, PLAYIT_KEY: e.target.value})} placeholder="playit-secret-key" className="w-full px-4 py-3 rounded-xl bg-black/20 border border-white/10 text-white" />
            </div>
            <div>
              <label className="block text-sm font-medium text-slate-300 mb-2">Cloudflare Tunnel Token</label>
-             <input type="password" placeholder="eyJh..." className="w-full px-4 py-3 rounded-xl bg-black/20 border border-white/10 text-white" />
+             <input type="password" value={networkConfig.CLOUDFLARED_TOKEN} onChange={(e) => setNetworkConfig({...networkConfig, CLOUDFLARED_TOKEN: e.target.value})} placeholder="eyJh..." className="w-full px-4 py-3 rounded-xl bg-black/20 border border-white/10 text-white" />
            </div>
-           <button className="py-3 px-6 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold rounded-xl transition-all shadow-lg shadow-emerald-500/20">
+           <div>
+             <label className="block text-sm font-medium text-slate-300 mb-2">Ngrok Auth Token</label>
+             <input type="password" value={networkConfig.NGROK_AUTHTOKEN} onChange={(e) => setNetworkConfig({...networkConfig, NGROK_AUTHTOKEN: e.target.value})} placeholder="ngrok-auth-token" className="w-full px-4 py-3 rounded-xl bg-black/20 border border-white/10 text-white" />
+           </div>
+           <div>
+             <label className="block text-sm font-medium text-slate-300 mb-2">Tailscale Auth Key</label>
+             <input type="password" value={networkConfig.TAILSCALE_AUTHKEY} onChange={(e) => setNetworkConfig({...networkConfig, TAILSCALE_AUTHKEY: e.target.value})} placeholder="tskey-auth..." className="w-full px-4 py-3 rounded-xl bg-black/20 border border-white/10 text-white" />
+           </div>
+           <button onClick={handleSaveNetworkConfig} className="py-3 px-6 bg-emerald-600 hover:bg-emerald-500 text-white font-semibold rounded-xl transition-all shadow-lg shadow-emerald-500/20">
               Save Network Config
            </button>
         </div>

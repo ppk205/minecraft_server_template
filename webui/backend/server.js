@@ -6,8 +6,10 @@ const authRoutes = require('./routes/auth');
 const dockerRoutes = require('./routes/docker');
 const filesRoutes = require('./routes/files');
 const modsRoutes = require('./routes/mods');
+const settingsRoutes = require('./routes/settings');
+const softwareRoutes = require('./routes/software');
 
-dotenv.config();
+dotenv.config({ path: path.resolve(__dirname, '../../.env') });
 
 const app = express();
 
@@ -19,6 +21,8 @@ app.use('/api/auth', authRoutes);
 app.use('/api/docker', dockerRoutes);
 app.use('/api/files', filesRoutes);
 app.use('/api/mods', modsRoutes);
+app.use('/api/settings', settingsRoutes);
+app.use('/api/software', softwareRoutes);
 
 // Serve Frontend
 app.use(express.static(path.join(__dirname, '../frontend/dist')));

@@ -12,7 +12,7 @@ export default function FileManager({ token }) {
   const fetchFiles = async (p) => {
     setLoading(true);
     try {
-      const res = await fetch(`http://localhost:3001/api/files/list?path=${encodeURIComponent(p)}`, {
+      const res = await fetch(`/api/files/list?path=${encodeURIComponent(p)}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       const data = await res.json();
@@ -33,7 +33,7 @@ export default function FileManager({ token }) {
       fetchFiles(file.path);
     } else {
       try {
-        const res = await fetch(`http://localhost:3001/api/files/read?path=${encodeURIComponent(file.path)}`, {
+        const res = await fetch(`/api/files/read?path=${encodeURIComponent(file.path)}`, {
           headers: { 'Authorization': `Bearer ${token}` }
         });
         const data = await res.json();
@@ -49,7 +49,7 @@ export default function FileManager({ token }) {
 
   const handleSave = async () => {
     try {
-      await fetch(`http://localhost:3001/api/files/write?path=${encodeURIComponent(editingFile.path)}`, {
+      await fetch(`/api/files/write?path=${encodeURIComponent(editingFile.path)}`, {
         method: 'POST',
         headers: {
           'Authorization': `Bearer ${token}`,

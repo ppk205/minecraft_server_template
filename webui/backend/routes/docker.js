@@ -1,14 +1,14 @@
 const express = require('express');
 const { exec } = require('child_process');
+const path = require('path');
 const { authenticateToken } = require('./auth');
-require('dotenv').config();
+require('dotenv').config({ path: path.resolve(__dirname, '../../../.env') });
 
 const router = express.Router();
-const containerName = process.env.DOCKER_CONTAINER_NAME || 'atmg';
 
 // Status
 router.get('/status', authenticateToken, (req, res) => {
-    exec(`docker inspect --format="{{.State.Status}}" ${containerName}`, (error, stdout, stderr) => {
+    exec(`cd ../.. && docker compose ps -q mc | xargs docker inspect --format="{{.State.Status}}"`, (error, stdout, stderr) => {
         if (error) {
             return res.json({ status: 'unknown', error: stderr.trim() });
         }
@@ -18,14 +18,14 @@ router.get('/status', authenticateToken, (req, res) => {
 
 // Logs
 router.get('/logs', authenticateToken, (req, res) => {
-    exec(`docker logs --tail 100 ${containerName}`, (error, stdout, stderr) => {
+    exec(`cd ../.. && docker compose logs --tail 100 mc`, (error, stdout, stderr) => {
         res.json({ logs: stdout + stderr });
     });
 });
 
 // Restart
 router.post('/restart', authenticateToken, (req, res) => {
-    exec(`docker restart ${containerName}`, (error, stdout, stderr) => {
+    exec(`cd ../.. && docker compose restart mc`, (error, stdout, stderr) => {
         if (error) {
             return res.status(500).json({ error: stderr });
         }
@@ -33,9 +33,19 @@ router.post('/restart', authenticateToken, (req, res) => {
     });
 });
 
+// Up
+router.post('/up', authenticateToken, (req, res) => {
+    exec(`cd ../.. && docker compose up -d`, (error, stdout, stderr) => {
+        if (error) {
+            return res.status(500).json({ error: stderr });
+        }
+        res.json({ message: 'Docker compose up successfully' });
+    });
+});
+
 // Start
 router.post('/start', authenticateToken, (req, res) => {
-    exec(`docker start ${containerName}`, (error, stdout, stderr) => {
+    exec(`cd ../.. && docker compose start mc`, (error, stdout, stderr) => {
         if (error) {
             return res.status(500).json({ error: stderr });
         }
@@ -45,7 +55,7 @@ router.post('/start', authenticateToken, (req, res) => {
 
 // Stop
 router.post('/stop', authenticateToken, (req, res) => {
-    exec(`docker stop ${containerName}`, (error, stdout, stderr) => {
+    exec(`cd ../.. && docker compose stop mc`, (error, stdout, stderr) => {
         if (error) {
             return res.status(500).json({ error: stderr });
         }
