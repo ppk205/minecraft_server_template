@@ -1,8 +1,9 @@
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
+const { exec } = require('child_process');
 const { authenticateToken } = require('./auth');
-require('dotenv').config();
+require('dotenv').config({ path: path.resolve(__dirname, '../../../.env') });
 
 const router = express.Router();
 const baseDir = path.resolve(__dirname, '..', process.env.MC_SERVER_DIR || '../../atmg');
@@ -52,7 +53,16 @@ router.get('/read', authenticateToken, securePath, (req, res) => {
 router.post('/write', authenticateToken, securePath, (req, res) => {
     try {
         fs.writeFileSync(req.resolvedPath, req.body.content, 'utf8');
-        res.json({ message: 'File saved successfully' });
+
+        // Auto restart docker container to apply config changes
+        exec(`cd ../.. && docker compose restart mc`, (error, stdout, stderr) => {
+            if (error) {
+                console.error("Failed to restart container:", stderr);
+                return res.json({ message: 'File saved, but failed to auto-restart server.', error: stderr });
+            }
+            res.json({ message: 'File saved successfully and server restarting to apply changes.' });
+        });
+
     } catch (error) {
         res.status(500).json({ error: error.message });
     }

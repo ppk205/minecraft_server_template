@@ -3,19 +3,34 @@ const fs = require('fs');
 const path = require('path');
 const axios = require('axios');
 const { authenticateToken } = require('./auth');
-require('dotenv').config();
+require('dotenv').config({ path: path.resolve(__dirname, '../../../.env') });
 
 const router = express.Router();
 const baseDir = path.resolve(__dirname, '..', process.env.MC_SERVER_DIR || '../../atmg');
 
 router.post('/fix-missing', authenticateToken, async (req, res) => {
-    // A simplified example showing CF to Modrinth fallback
-    // In a real scenario, this would parse manifest.json and check the installed mods folder
+    let { missingNames } = req.body;
     
-    // For demonstration, let's say we expect the user to send missing project IDs or names
-    const { missingNames } = req.body; // e.g. ["sodium", "lithium"]
+    // Auto mode: check manifest.json and mods/ folder
+    if (!missingNames || missingNames.length === 0) {
+        missingNames = [];
+        try {
+            const manifestPath = path.join(baseDir, 'manifest.json');
+            const modsDir = path.join(baseDir, 'mods');
+
+            if (fs.existsSync(manifestPath) && fs.existsSync(modsDir)) {
+                const manifest = JSON.parse(fs.readFileSync(manifestPath, 'utf8'));
+                const installedMods = fs.readdirSync(modsDir).filter(f => f.endsWith('.jar'));
+
+                // For demonstration: we don't know the exact jar names for CF file IDs,
+                // but a user can also pass missing project names from the frontend.
+                // We'll just rely on the manual names if they're passed, but if not we can return an error
+                // asking for manual names. A true CF-to-Modrinth mapper requires mapping CF Project IDs to Modrinth slugs.
+            }
+        } catch(e) {}
+    }
     
-    if (!missingNames || !Array.isArray(missingNames)) {
+    if (!missingNames || !Array.isArray(missingNames) || missingNames.length === 0) {
         return res.status(400).json({ error: 'Please provide missingNames array.' });
     }
     
@@ -29,23 +44,18 @@ router.post('/fix-missing', authenticateToken, async (req, res) => {
 
     for (const name of missingNames) {
         try {
-            // Query Modrinth for the project
-            // Using search API: https://api.modrinth.com/v2/search?query=name
             const searchRes = await axios.get(`https://api.modrinth.com/v2/search?query=${name}&limit=1`);
             
             if (searchRes.data.hits && searchRes.data.hits.length > 0) {
                 const projectId = searchRes.data.hits[0].project_id;
                 
-                // Get project versions
                 const versionsRes = await axios.get(`https://api.modrinth.com/v2/project/${projectId}/version`);
                 
                 if (versionsRes.data && versionsRes.data.length > 0) {
-                    // Pick latest version file
-                    const file = versionsRes.data[0].files[0];
+                    const file = versionsRes.data[0].files.find(f => f.primary) || versionsRes.data[0].files[0];
                     const downloadUrl = file.url;
                     const fileName = file.filename;
                     
-                    // Download the file
                     const fileRes = await axios.get(downloadUrl, { responseType: 'stream' });
                     const writeStream = fs.createWriteStream(path.join(modsDir, fileName));
                     fileRes.data.pipe(writeStream);

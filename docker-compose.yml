@@ -28,9 +28,9 @@ services:
       - "19565:19565"
     environment:
       EULA: "true"
-      MODPACK_PLATFORM: AUTO_CURSEFORGE
-      CF_API_KEY: ${CF_API_KEY}
-      CF_SLUG: all-the-mods-gravitas2
+      TYPE: ${MC_TYPE:-AUTO_CURSEFORGE}
+      CF_API_KEY: ${MC_CF_API_KEY:-}
+      CF_SLUG: ${MC_CF_SLUG:-all-the-mods-gravitas2}
       CF_OVERRIDES_EXCLUSIONS: |
         shaderpacks/**
         mods/colorwheel*.jar
@@ -39,7 +39,7 @@ services:
       CF_EXCLUDE_MODS: |
         colorwheel
         colorwheel-patcher
-      MEMORY: 8G
+      MEMORY: ${MC_MEMORY:-8G}
       DIFFICULTY: HARD
       ONLINE_MODE: FALSE
       PVP: FALSE
@@ -55,6 +55,8 @@ services:
       - SECRET_KEY=${PLAYIT_KEY}
     stdin_open: true
     tty: true
+    profiles:
+      - playit
   cloudflared:
     image: cloudflare/cloudflared:latest
     network_mode: host
@@ -62,6 +64,32 @@ services:
     command: tunnel run
     volumes:
       - /home/user/.cloudflared:/etc/cloudflared
+    environment:
+      - TUNNEL_TOKEN=${CLOUDFLARED_TOKEN}
+    profiles:
+      - cloudflared
+  ngrok:
+    image: ngrok/ngrok:latest
+    container_name: ngrok_tunnel
+    network_mode: host
+    restart: unless-stopped
+    command: tcp 25565
+    environment:
+      - NGROK_AUTHTOKEN=${NGROK_AUTHTOKEN}
+    profiles:
+      - ngrok
+  tailscale:
+    image: tailscale/tailscale:latest
+    container_name: tailscale
+    network_mode: host
+    environment:
+      - TS_AUTHKEY=${TAILSCALE_AUTHKEY}
+      - TS_STATE_DIR=/var/lib/tailscale
+    volumes:
+      - tailscale_data:/var/lib/tailscale
+    restart: unless-stopped
+    profiles:
+      - tailscale
   prometheus:
     image: prom/prometheus:v2.51.0
     command:
@@ -70,5 +98,7 @@ services:
     ports:
       - "9090:9090"
     volumes:
-      - /home/user/myapp/prometheus:/etc/prometheus
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
       - ./prometheus-data:/prometheus
+volumes:
+  tailscale_data:
