@@ -1,5 +1,5 @@
 import { Routes, Route, NavLink, useNavigate } from 'react-router-dom';
-import { Server, Folder, Settings, LogOut, Activity, Power, RotateCw, Square } from 'lucide-react';
+import { Server, Folder, Settings, LogOut, Activity, Power, RotateCw, Square, Loader2 } from 'lucide-react';
 import { useState, useEffect } from 'react';
 import FileManager from './FileManager';
 import ServerSettings from './ServerSettings';
@@ -7,6 +7,7 @@ import ServerSettings from './ServerSettings';
 function StatusOverview({ token }) {
   const [status, setStatus] = useState('unknown');
   const [logs, setLogs] = useState('');
+  const [actionInProgress, setActionInProgress] = useState(false);
 
   const fetchStatus = async () => {
     try {
@@ -41,6 +42,7 @@ function StatusOverview({ token }) {
   }, [token]);
 
   const controlServer = async (action) => {
+    setActionInProgress(true);
     try {
       await fetch(`/api/docker/${action}`, {
         method: 'POST',
@@ -48,7 +50,9 @@ function StatusOverview({ token }) {
       });
       fetchStatus();
     } catch (err) {
-      alert(`Failed to ${action} server`);
+      console.error(`Failed to ${action} server`, err);
+    } finally {
+      setTimeout(() => setActionInProgress(false), 2000); // 2 second mock delay for smooth UX during status poll
     }
   };
 
@@ -68,14 +72,14 @@ function StatusOverview({ token }) {
         </div>
         
         <div className="col-span-1 md:col-span-2 bg-white/5 border border-white/10 rounded-2xl p-6 backdrop-blur-md flex items-center gap-4">
-           <button onClick={() => controlServer('start')} className="flex items-center gap-2 flex-1 justify-center py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl transition-all shadow-lg shadow-emerald-500/20">
-             <Power size={18} /> Start
+           <button disabled={actionInProgress} onClick={() => controlServer('start')} className="flex items-center gap-2 flex-1 justify-center py-3 bg-emerald-600 hover:bg-emerald-500 text-white rounded-xl transition-all shadow-lg shadow-emerald-500/20 disabled:opacity-50 disabled:cursor-not-allowed">
+             {actionInProgress ? <Loader2 size={18} className="animate-spin" /> : <Power size={18} />} Start
            </button>
-           <button onClick={() => controlServer('restart')} className="flex items-center gap-2 flex-1 justify-center py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl transition-all shadow-lg shadow-blue-500/20">
-             <RotateCw size={18} /> Restart
+           <button disabled={actionInProgress} onClick={() => controlServer('restart')} className="flex items-center gap-2 flex-1 justify-center py-3 bg-blue-600 hover:bg-blue-500 text-white rounded-xl transition-all shadow-lg shadow-blue-500/20 disabled:opacity-50 disabled:cursor-not-allowed">
+             {actionInProgress ? <Loader2 size={18} className="animate-spin" /> : <RotateCw size={18} />} Restart
            </button>
-           <button onClick={() => controlServer('stop')} className="flex items-center gap-2 flex-1 justify-center py-3 bg-red-600 hover:bg-red-500 text-white rounded-xl transition-all shadow-lg shadow-red-500/20">
-             <Square size={18} /> Stop
+           <button disabled={actionInProgress} onClick={() => controlServer('stop')} className="flex items-center gap-2 flex-1 justify-center py-3 bg-red-600 hover:bg-red-500 text-white rounded-xl transition-all shadow-lg shadow-red-500/20 disabled:opacity-50 disabled:cursor-not-allowed">
+             {actionInProgress ? <Loader2 size={18} className="animate-spin" /> : <Square size={18} />} Stop
            </button>
         </div>
       </div>
