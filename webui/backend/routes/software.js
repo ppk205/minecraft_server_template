@@ -3,38 +3,11 @@ const fs = require('fs');
 const path = require('path');
 const { execSync, exec } = require('child_process');
 const { authenticateToken } = require('./auth');
+const { saveEnv } = require('../utils/env');
 require('dotenv').config({ path: path.resolve(__dirname, '../../../.env') });
 
 const router = express.Router();
 const baseDir = path.resolve(__dirname, '..', process.env.MC_SERVER_DIR || '../../atmg');
-const envPath = path.resolve(__dirname, '../../../.env');
-
-// Save object to .env
-const saveEnv = (updates) => {
-    let content = fs.existsSync(envPath) ? fs.readFileSync(envPath, 'utf8') : '';
-    const lines = content.split('\n');
-    const newLines = [];
-    const keysUpdated = new Set();
-
-    for (let i = 0; i < lines.length; i++) {
-        const line = lines[i];
-        const match = line.match(/^([^=]+)=(.*)$/);
-        if (match && updates[match[1]] !== undefined) {
-            newLines.push(`${match[1]}=${updates[match[1]]}`);
-            keysUpdated.add(match[1]);
-        } else {
-            newLines.push(line);
-        }
-    }
-
-    for (const [key, value] of Object.entries(updates)) {
-        if (!keysUpdated.has(key)) {
-            newLines.push(`${key}=${value}`);
-        }
-    }
-
-    fs.writeFileSync(envPath, newLines.join('\n'), 'utf8');
-};
 
 router.post('/change', authenticateToken, (req, res) => {
     const { software, backup } = req.body;
