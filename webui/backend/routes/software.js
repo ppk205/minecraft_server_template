@@ -1,7 +1,7 @@
 const express = require('express');
 const fs = require('fs');
 const path = require('path');
-const { execSync, exec } = require('child_process');
+const { execFileSync, exec } = require('child_process');
 const { authenticateToken } = require('./auth');
 require('dotenv').config({ path: path.resolve(__dirname, '../../../.env') });
 
@@ -51,7 +51,7 @@ router.post('/change', authenticateToken, (req, res) => {
         if (fs.existsSync(worldPath)) {
             const backupFile = path.join(backupDir, `world-backup-${timestamp}.tar.gz`);
             try {
-                execSync(`tar -czf "${backupFile}" -C "${baseDir}" world`);
+                execFileSync('tar', ['-czf', backupFile, '-C', baseDir, 'world']);
             } catch (err) {
                 console.error("Backup failed", err);
             }
@@ -60,8 +60,16 @@ router.post('/change', authenticateToken, (req, res) => {
 
     // Wipe server dir except specific directories if you want
     try {
-        execSync(`rm -rf "${path.join(baseDir, 'world')}" "${path.join(baseDir, 'mods')}" "${path.join(baseDir, 'config')}"`);
-    } catch(err) {}
+        const dirsToRemove = ['world', 'mods', 'config'];
+        for (const dir of dirsToRemove) {
+            const targetPath = path.join(baseDir, dir);
+            if (fs.existsSync(targetPath)) {
+                fs.rmSync(targetPath, { recursive: true, force: true });
+            }
+        }
+    } catch(err) {
+        console.error("Wipe failed", err);
+    }
 
     saveEnv({ MC_TYPE: software });
 
