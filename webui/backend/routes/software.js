@@ -61,7 +61,9 @@ router.post('/change', authenticateToken, (req, res) => {
     // Wipe server dir except specific directories if you want
     try {
         execSync(`rm -rf "${path.join(baseDir, 'world')}" "${path.join(baseDir, 'mods')}" "${path.join(baseDir, 'config')}"`);
-    } catch(err) {}
+    } catch (err) {
+        console.error("Failed to wipe server directory:", err);
+    }
 
     saveEnv({ MC_TYPE: software });
 
