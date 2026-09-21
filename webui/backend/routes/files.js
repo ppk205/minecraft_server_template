@@ -12,7 +12,7 @@ const baseDir = path.resolve(__dirname, '..', process.env.MC_SERVER_DIR || '../.
 const securePath = (req, res, next) => {
     const targetPath = req.query.path || '/';
     const resolvedPath = path.resolve(baseDir, `.${targetPath}`);
-    if (!resolvedPath.startsWith(baseDir)) {
+    if (resolvedPath !== baseDir && !resolvedPath.startsWith(baseDir + path.sep)) {
         return res.status(403).json({ error: 'Access denied' });
     }
     req.resolvedPath = resolvedPath;
