@@ -27,7 +27,9 @@ router.post('/fix-missing', authenticateToken, async (req, res) => {
                 // We'll just rely on the manual names if they're passed, but if not we can return an error
                 // asking for manual names. A true CF-to-Modrinth mapper requires mapping CF Project IDs to Modrinth slugs.
             }
-        } catch(e) {}
+        } catch (e) {
+            console.error('Error reading manifest or mods directory:', e.message);
+        }
     }
     
     if (!missingNames || !Array.isArray(missingNames) || missingNames.length === 0) {
