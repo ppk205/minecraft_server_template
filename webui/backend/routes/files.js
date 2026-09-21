@@ -68,4 +68,5 @@ router.post('/write', authenticateToken, securePath, (req, res) => {
     }
 });
 
+router.securePath = securePath;
 module.exports = router;
