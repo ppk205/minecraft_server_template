@@ -37,13 +37,13 @@ router.get('/list', authenticateToken, securePath, (req, res) => {
     }
 });
 
-router.get('/read', authenticateToken, securePath, (req, res) => {
+router.get('/read', authenticateToken, securePath, async (req, res) => {
     if (!fs.existsSync(req.resolvedPath)) {
         return res.status(404).json({ error: 'File not found' });
     }
 
     try {
-        const content = fs.readFileSync(req.resolvedPath, 'utf8');
+        const content = await fs.promises.readFile(req.resolvedPath, 'utf8');
         res.json({ content });
     } catch (error) {
         res.status(500).json({ error: error.message });
