@@ -99,3 +99,4 @@ router.post('/stop', authenticateToken, async (req, res) => {
 });
 
 module.exports = router;
+module.exports.getMcContainer = getMcContainer;
